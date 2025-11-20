@@ -1,89 +1,876 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pomodoro Produtivo</title>
+    <!-- Carrega Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Configuração de Fonte Global e Estilos Customizados */
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
+      body {
+        font-family: "Inter", sans-serif;
+        transition: all 0.5s ease; /* Transição suave para a mudança de cor do body */
+      }
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.6.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.6.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.6.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.6.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.6.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.6.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.6.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.6.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.6.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.6.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+      /* --- ESTILOS DE ANIMAÇÃO DE FUNDO (NOVO) --- */
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
+      /* Keyframe para o movimento horizontal das nuvens */
+      @keyframes move-clouds {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: 1000px 0;
+        }
+      }
+
+      /* Estilo do container de animação, fixo no fundo */
+      #animated-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0; /* Garante que fique atrás do conteúdo */
+        overflow: hidden; /* Garante que as nuvens que se movem para fora da tela não causem scroll */
+      }
+
+      /* Estilo base para nuvens (simulação com SVG inline para evitar arquivos externos) */
+      .cloud-animation {
+        /* Textura da nuvem: um SVG simples de onda branca para simular a forma da nuvem */
+        background: transparent
+          url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><path fill="%23FFFFFF" opacity="0.6" d="M10 10 C 20 0, 40 0, 50 10 S 70 20, 80 10 S 90 0, 100 10 L 100 20 L 0 20 Z" /></svg>')
+          repeat-x;
+        animation: move-clouds 50s linear infinite; /* Movimento contínuo */
+        height: 100%;
+        width: 300%; /* Permite o movimento suave e contínuo */
+        position: absolute;
+      }
+
+      /* Camada mais lenta para dar sensação de profundidade */
+      .cloud-layer-2 {
+        animation-duration: 70s;
+        opacity: 0.4;
+        transform: scale(1.2);
+      }
+
+      /* Estilo para a animação do timer (Círculo de Progresso) */
+      .progress-ring__circle {
+        transition: stroke-dashoffset 0.35s;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
       }
     </style>
   </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
+  <!-- A classe de fundo do body é definida dinamicamente pelo JS -->
+  <body class="min-h-screen flex flex-col items-center justify-center p-4">
+    <!-- Camada de Background Animado (NOVO) -->
+    <div id="animated-background"></div>
+
+    <!-- Configuração e inicialização do Firebase (essencial no ambiente Canvas) -->
+    <script type="module">
+      // Variáveis globais de ambiente fornecidas pelo Canvas
+      const appId =
+        typeof __app_id !== "undefined" ? __app_id : "default-app-id";
+      const firebaseConfig =
+        typeof __firebase_config !== "undefined"
+          ? JSON.parse(__firebase_config)
+          : {};
+      const initialAuthToken =
+        typeof __initial_auth_token !== "undefined" ? initialAuthToken : null;
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+      import {
+        getAuth,
+        signInAnonymously,
+        signInWithCustomToken,
+      } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+      import {
+        getFirestore,
+        setDoc,
+        doc,
+        onSnapshot,
+      } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+      // Variáveis globais para uso no script principal
+      window.app = null;
+      window.db = null;
+      window.auth = null;
+      window.userId = null;
+
+      // Função de inicialização
+      async function initializeFirebase() {
+        try {
+          if (Object.keys(firebaseConfig).length > 0) {
+            window.app = initializeApp(firebaseConfig);
+            window.db = getFirestore(window.app);
+            window.auth = getAuth(window.app);
+
+            if (initialAuthToken) {
+              await signInWithCustomToken(window.auth, initialAuthToken);
+            } else {
+              await signInAnonymously(window.auth);
+            }
+            window.userId = window.auth.currentUser?.uid || crypto.randomUUID();
+            console.log("Firebase e autenticação inicializados com sucesso.");
+          } else {
+            console.warn(
+              "Configuração do Firebase não encontrada. Operações de DB serão ignoradas."
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Erro na inicialização do Firebase ou autenticação:",
+            error
+          );
+        }
+      }
+
+      initializeFirebase();
+    </script>
+
+    <!-- Container Principal do App (Z-index 10 para ficar acima do fundo animado) -->
+    <main
+      class="w-full max-w-xl flex flex-col items-center space-y-8 relative z-10"
+    >
+      <!-- Painel de Clima e Simulação -->
+      <div
+        class="w-full bg-white p-4 shadow-lg rounded-xl border border-gray-200 flex justify-between items-center text-sm font-semibold text-gray-700"
+      >
+        <div id="weather-display" class="flex items-center space-x-2">
+          <span id="weather-icon">☀️</span>
+          <span id="weather-condition">Clima em São Paulo: Ensolarado</span>
+          <span id="weather-temp" class="text-gray-500">23°C</span>
+        </div>
+        <button
+          id="cycle-weather-btn"
+          class="px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 text-xs"
+        >
+          Simular Clima
+        </button>
+      </div>
+
+      <!-- Banner de Anúncio Superior (AD 1) -->
+      <div
+        id="ad-banner-top"
+        class="w-full bg-white p-4 shadow-lg rounded-xl border border-gray-200"
+      >
+        <h2 class="text-lg font-semibold text-gray-700 mb-2">
+          Espaço para Anúncio (AD 1)
+        </h2>
+        <div
+          class="h-20 bg-yellow-100 border-2 border-dashed border-yellow-400 flex items-center justify-center text-sm text-yellow-700 rounded-lg"
+        >
+          <p>Insira seu código de anúncio aqui (ex: Google AdSense, etc.).</p>
+          <!-- O código do seu anúncio será carregado aqui -->
+        </div>
+      </div>
+
+      <!-- Cartão do Pomodoro -->
+      <div
+        id="pomodoro-card"
+        class="w-full bg-white p-6 shadow-2xl rounded-3xl transition-colors duration-500 ease-in-out"
+      >
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">
+          Pomodoro Focado
+        </h1>
+
+        <!-- Contador de Moedas -->
+        <div class="flex justify-between items-center mb-6 px-2">
+          <div
+            class="flex items-center space-x-2 text-lg font-semibold text-gray-700 bg-yellow-50 p-2 rounded-xl shadow-inner"
+          >
+            <!-- Ícone de Moeda SVG -->
+            <svg
+              class="w-6 h-6 text-yellow-500"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.5 15h-3c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5h1.5v-1.5h-1.5V9h-1.5v1.5H8c-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5h3v1.5h-3V17h-1.5v-1.5H6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5H8v-1.5h-.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5h3c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5h-1.5v1.5h1.5V17z"
+              />
+            </svg>
+            <span id="focus-coins">0 Moedas</span>
+          </div>
+          <span id="current-cycle" class="text-sm text-gray-500 mt-1"
+            >Sessões Foco: 0</span
+          >
+        </div>
+
+        <!-- Seleção de Modo (Work/Break) -->
+        <div
+          class="flex justify-center mb-8 bg-gray-100 p-2 rounded-xl shadow-inner"
+        >
+          <button
+            id="mode-work"
+            data-mode="work"
+            class="mode-button px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 text-white bg-red-600 shadow-md hover:bg-red-700"
+          >
+            Foco
+          </button>
+          <button
+            id="mode-short"
+            data-mode="shortBreak"
+            class="mode-button px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 text-gray-600 hover:bg-gray-200"
+          >
+            Pausa Curta
+          </button>
+          <button
+            id="mode-long"
+            data-mode="longBreak"
+            class="mode-button px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 text-gray-600 hover:bg-gray-200"
+          >
+            Pausa Longa
+          </button>
+        </div>
+
+        <!-- Display do Timer com SVG Circular Progress -->
+        <div class="relative flex justify-center items-center mb-8">
+          <svg
+            id="progress-ring"
+            class="w-64 h-64 sm:w-80 sm:h-80"
+            viewBox="0 0 100 100"
+          >
+            <!-- Fundo do Círculo -->
+            <circle
+              id="progress-ring-track"
+              stroke="#e5e7eb"
+              stroke-width="8"
+              fill="transparent"
+              r="45"
+              cx="50"
+              cy="50"
+            />
+            <!-- Barra de Progresso (Stroke será atualizado via JS) -->
+            <circle
+              id="progress-ring-bar"
+              class="progress-ring__circle"
+              stroke="#ef4444"
+              stroke-width="8"
+              stroke-linecap="round"
+              fill="transparent"
+              r="45"
+              cx="50"
+              cy="50"
+            />
+          </svg>
+          <div class="absolute flex flex-col items-center">
+            <span
+              id="timer-display"
+              class="text-6xl sm:text-7xl font-extrabold text-gray-800"
+              >25:00</span
+            >
+            <span id="cycle-detail" class="text-sm text-gray-500 mt-1"></span>
+          </div>
+        </div>
+
+        <!-- Controles do Timer -->
+        <div class="flex justify-center space-x-4">
+          <button
+            id="start-pause-btn"
+            class="px-8 py-3 text-lg font-bold text-white bg-green-500 rounded-full shadow-lg shadow-green-500/50 hover:bg-green-600 transform hover:scale-105 transition-all duration-200 flex items-center space-x-2"
+          >
+            <svg
+              id="play-icon"
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.877v4.246a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <svg
+              id="pause-icon"
+              class="w-6 h-6 hidden"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span id="start-pause-text">Iniciar</span>
+          </button>
+
+          <button
+            id="reset-btn"
+            class="p-4 bg-gray-200 text-gray-700 rounded-full shadow-md hover:bg-gray-300 transform hover:scale-105 transition-all duration-200"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              ></path>
+            </svg>
+          </button>
+
+          <!-- BOTÃO DE MÚSICA -->
+          <button
+            id="music-toggle-btn"
+            class="p-4 bg-gray-200 text-gray-700 rounded-full shadow-md hover:bg-gray-300 transform hover:scale-105 transition-all duration-200 flex items-center justify-center"
+          >
+            <!-- Icone de Música SVG -->
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19V6l12-3v13M9 19l12 3M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <p id="message" class="text-center text-sm text-gray-500 mt-4 h-5">
+          Pronto para começar?
+        </p>
+      </div>
+
+      <!-- Painel do Player de Música -->
+      <div
+        id="music-player-panel"
+        class="w-full max-w-xl bg-white p-4 shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hidden"
+      >
+        <h2
+          class="text-xl font-bold text-gray-800 mb-3 flex justify-between items-center"
+        >
+          Lofi Brasileiro para Foco
+          <button
+            id="close-music-btn"
+            class="text-3xl text-gray-500 hover:text-gray-800 leading-none p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+          >
+            &times;
+            <!-- Símbolo X -->
+          </button>
+        </h2>
+        <!-- Player do YouTube com uma playlist de Lofi (exemplo) -->
+        <iframe
+          id="youtube-player"
+          width="100%"
+          height="200"
+          src="https://www.youtube.com/embed/jfKfPmmGF0Y?autoplay=0&loop=1&playlist=jfKfPmmGF0Y"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+          class="rounded-lg shadow-md"
+        >
+        </iframe>
+        <p class="text-xs text-gray-500 mt-2">
+          Dica: Você pode editar o código `jfKfPmmGF0Y` no `src` do iframe para
+          sua playlist favorita!
+        </p>
+      </div>
+
+      <!-- Banner de Anúncio Inferior (AD 2) -->
+      <div
+        id="ad-banner-bottom"
+        class="w-full bg-white p-4 shadow-lg rounded-xl border border-gray-200"
+      >
+        <h2 class="text-lg font-semibold text-gray-700 mb-2">
+          Espaço para Anúncio (AD 2)
+        </h2>
+        <div
+          class="h-20 bg-yellow-100 border-2 border-dashed border-yellow-400 flex items-center justify-center text-sm text-yellow-700 rounded-lg"
+        >
+          <p>Insira seu código de anúncio aqui (ex: Google AdSense, etc.).</p>
+          <!-- O código do seu anúncio será carregado aqui -->
+        </div>
+      </div>
+    </main>
 
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+      // --- Constantes do Timer (em segundos) ---
+      const TIME_WORK = 25 * 60;
+      const TIME_SHORT_BREAK = 5 * 60;
+      const TIME_LONG_BREAK = 15 * 60;
+      const FULL_CYCLE = 4; // Um ciclo longo acontece após 4 sessões de foco
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+      // --- Configuração de Temas de Clima (Inclui Background Gradient e Animação) ---
+      const WEATHER_THEMES = {
+        SUNNY: {
+          icon: "☀️",
+          condition: "Ensolarado",
+          temp: "23°C",
+          // Gradiente de céu claro
+          bodyClass: "bg-gradient-to-b from-yellow-200 to-yellow-50",
+          animation: "", // Sem animação de nuvem
+        },
+        CLOUDY: {
+          icon: "☁️",
+          condition: "Nublado",
+          temp: "18°C",
+          // Gradiente de céu cinza
+          bodyClass: "bg-gradient-to-b from-gray-400 to-gray-200",
+          animation: `
+                    <!-- Camada de nuvens mais próxima (rápida) -->
+                    <div class="cloud-animation cloud-layer-1 absolute inset-0 z-10" style="top: 10%;"></div>
+                    <!-- Camada de nuvens mais distante (lenta e maior) -->
+                    <div class="cloud-animation cloud-layer-2 absolute inset-0 z-0" style="top: 30%; animation-duration: 70s;"></div>
+                `,
+        },
+        RAINY: {
+          icon: "🌧️",
+          condition: "Chuvoso",
+          temp: "15°C",
+          // Gradiente de céu de chuva
+          bodyClass: "bg-gradient-to-b from-blue-500 to-blue-200",
+          animation: `
+                    <!-- Camada de nuvens mais próxima (rápida) -->
+                    <div class="cloud-animation cloud-layer-1 absolute inset-0 z-10" style="top: 5%;"></div>
+                    <!-- Camada de nuvens mais distante (lenta e maior) -->
+                    <div class="cloud-animation cloud-layer-2 absolute inset-0 z-0" style="top: 25%; animation-duration: 60s;"></div>
+                `,
+        },
+      };
+      const WEATHER_KEYS = ["SUNNY", "CLOUDY", "RAINY"];
+
+      // --- Estado do Aplicativo ---
+      let state = {
+        isRunning: false,
+        currentMode: "work", // 'work', 'shortBreak', 'longBreak'
+        timeLeft: TIME_WORK,
+        timerTimeoutId: null,
+        lastTickTime: 0,
+        focusSessions: 0,
+        focusCoins: 0,
+        currentWeatherIndex: 0, // Índice inicial: SUNNY
+      };
+
+      // --- Elementos DOM ---
+      const elements = {
+        timerDisplay: document.getElementById("timer-display"),
+        startPauseBtn: document.getElementById("start-pause-btn"),
+        startPauseText: document.getElementById("start-pause-text"),
+        playIcon: document.getElementById("play-icon"),
+        pauseIcon: document.getElementById("pause-icon"),
+        resetBtn: document.getElementById("reset-btn"),
+        modeButtons: document.querySelectorAll(".mode-button"),
+        pomodoroCard: document.getElementById("pomodoro-card"),
+        message: document.getElementById("message"),
+        currentCycle: document.getElementById("current-cycle"),
+        focusCoinsDisplay: document.getElementById("focus-coins"),
+        cycleDetail: document.getElementById("cycle-detail"),
+        progressRing: document.getElementById("progress-ring-bar"),
+        musicToggleBtn: document.getElementById("music-toggle-btn"),
+        musicPlayerPanel: document.getElementById("music-player-panel"),
+        closeMusicBtn: document.getElementById("close-music-btn"),
+        // Elementos de Clima
+        weatherIcon: document.getElementById("weather-icon"),
+        weatherCondition: document.getElementById("weather-condition"),
+        weatherTemp: document.getElementById("weather-temp"),
+        cycleWeatherBtn: document.getElementById("cycle-weather-btn"),
+        animatedBackground: document.getElementById("animated-background"), // NOVO
+      };
+
+      // --- SVG Progress Ring Configuration ---
+      const radius = 45;
+      const circumference = 2 * Math.PI * radius;
+      elements.progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+      elements.progressRing.style.strokeDashoffset = circumference;
+
+      /**
+       * Aplica a classe de fundo baseada no clima E injeta animação.
+       */
+      function applyWeatherTheme() {
+        const key = WEATHER_KEYS[state.currentWeatherIndex];
+        const theme = WEATHER_THEMES[key];
+
+        // 1. Remove classes de fundo anteriores
+        // Primeiro removemos as classes de gradiente da iteração anterior
+        const bodyClasses = document.body.className
+          .split(" ")
+          .filter((c) => !c.startsWith("bg-gradient-"));
+        document.body.className = bodyClasses.join(" ");
+
+        // 2. Adiciona a nova classe de fundo (gradiente)
+        document.body.className += " " + theme.bodyClass;
+
+        // 3. Injeta a animação de nuvem
+        elements.animatedBackground.innerHTML = theme.animation;
+
+        // 4. Atualiza o indicador de clima
+        elements.weatherIcon.textContent = theme.icon;
+        elements.weatherCondition.textContent = `Clima em São Paulo: ${theme.condition}`;
+        elements.weatherTemp.textContent = theme.temp;
+      }
+
+      /**
+       * Simula a mudança do clima ciclando entre os temas.
+       */
+      function cycleWeatherTheme() {
+        // Avança para o próximo índice, voltando a zero se passar do final
+        state.currentWeatherIndex =
+          (state.currentWeatherIndex + 1) % WEATHER_KEYS.length;
+        applyWeatherTheme();
+      }
+
+      /**
+       * Atualiza a barra de progresso circular.
+       * @param {number} percent - Porcentagem de tempo restante (0 a 100).
+       */
+      function setProgress(percent) {
+        const offset = circumference - (percent / 100) * circumference;
+        elements.progressRing.style.strokeDashoffset = offset;
+      }
+
+      /**
+       * Formata segundos para o formato MM:SS.
+       * @param {number} totalSeconds - O tempo total em segundos.
+       * @returns {string} Tempo formatado.
+       */
+      function formatTime(totalSeconds) {
+        const safeSeconds = Math.max(0, totalSeconds);
+        const minutes = Math.floor(safeSeconds / 60);
+        const seconds = safeSeconds % 60;
+        return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+          2,
+          "0"
+        )}`;
+      }
+
+      /**
+       * Atualiza a cor e o texto do botão de modo ativo.
+       */
+      function updateModeButtons() {
+        const modeConfig = getModeConfig(state.currentMode);
+
+        elements.modeButtons.forEach((btn) => {
+          btn.classList.remove(
+            "bg-red-600",
+            "bg-blue-600",
+            "bg-indigo-600",
+            "text-white",
+            "shadow-md"
+          );
+          btn.classList.add("text-gray-600", "hover:bg-gray-200");
+
+          if (btn.dataset.mode === state.currentMode) {
+            btn.classList.remove("text-gray-600", "hover:bg-gray-200");
+            btn.classList.add(
+              modeConfig.buttonClass,
+              "text-white",
+              "shadow-md"
+            );
+          }
+        });
+
+        // Atualiza a cor da barra de progresso
+        elements.progressRing.style.stroke = modeConfig.color;
+
+        // Atualiza a cor do botão Iniciar/Pausar
+        const baseClasses =
+          "px-8 py-3 text-lg font-bold text-white rounded-full shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center space-x-2";
+        const colorClass = modeConfig.buttonClass;
+        const shadowColor = modeConfig.color.replace("#", "");
+
+        elements.startPauseBtn.className = `${baseClasses} ${colorClass} shadow-${shadowColor}/50`;
+      }
+
+      /**
+       * Retorna a configuração de cor e tempo para o modo atual.
+       * @param {string} mode - O modo atual ('work', 'shortBreak', 'longBreak').
+       * @returns {object} Configurações do modo.
+       */
+      function getModeConfig(mode) {
+        switch (mode) {
+          case "work":
+            return {
+              time: TIME_WORK,
+              color: "#ef4444",
+              buttonClass: "bg-red-600",
+            }; // Vermelho
+          case "shortBreak":
+            return {
+              time: TIME_SHORT_BREAK,
+              color: "#3b82f6",
+              buttonClass: "bg-blue-600",
+            }; // Azul
+          case "longBreak":
+            return {
+              time: TIME_LONG_BREAK,
+              color: "#4f46e5",
+              buttonClass: "bg-indigo-600",
+            }; // Roxo
+          default:
+            return {
+              time: TIME_WORK,
+              color: "#ef4444",
+              buttonClass: "bg-red-600",
+            };
         }
+      }
+
+      /**
+       * Muda o modo do timer e atualiza o estado.
+       * @param {string} newMode - O novo modo.
+       */
+      function changeMode(newMode) {
+        if (state.isRunning) {
+          toggleTimer(false); // Pausa se estiver rodando
+        }
+        if (state.timerTimeoutId) {
+          clearTimeout(state.timerTimeoutId);
+          state.timerTimeoutId = null;
+        }
+
+        state.currentMode = newMode;
+        const config = getModeConfig(newMode);
+        state.timeLeft = config.time;
+        updateUI();
+        updateModeButtons();
+
+        elements.message.textContent =
+          newMode === "work"
+            ? "Hora de focar! Ganhe moedas por produtividade."
+            : newMode === "shortBreak"
+            ? "Pausa rápida, você merece."
+            : "Recarga total. Fique longe.";
+
+        elements.startPauseText.textContent = "Iniciar";
+        elements.playIcon.classList.remove("hidden");
+        elements.pauseIcon.classList.add("hidden");
+      }
+
+      /**
+       * Função principal de loop do timer que corrige o desvio (drift) de tempo.
+       */
+      function startCountdown() {
+        if (!state.isRunning || state.timeLeft <= 0) {
+          return;
+        }
+
+        const now = Date.now();
+        const timeElapsedSinceLastTick = now - state.lastTickTime;
+
+        if (state.lastTickTime === 0 || timeElapsedSinceLastTick >= 1000) {
+          const secondsToDecrement =
+            state.lastTickTime === 0
+              ? 0
+              : Math.floor(timeElapsedSinceLastTick / 1000);
+
+          state.timeLeft -= secondsToDecrement;
+
+          state.lastTickTime = now;
+
+          updateUI();
+
+          if (state.timeLeft <= 0) {
+            handleTimerEnd();
+            return;
+          }
+        }
+        state.timerTimeoutId = setTimeout(startCountdown, 10);
+      }
+
+      /**
+       * Alterna entre Iniciar e Pausar o timer.
+       * @param {boolean} [forceState] - Força o estado (true para iniciar, false para pausar).
+       */
+      function toggleTimer(forceState) {
+        const newState =
+          forceState !== undefined ? forceState : !state.isRunning;
+
+        if (newState) {
+          // INICIAR
+          state.isRunning = true;
+          state.lastTickTime = Date.now();
+          elements.startPauseText.textContent = "Pausar";
+          elements.playIcon.classList.add("hidden");
+          elements.pauseIcon.classList.remove("hidden");
+
+          startCountdown();
+        } else {
+          // PAUSAR
+          state.isRunning = false;
+          elements.startPauseText.textContent = "Retomar";
+          elements.playIcon.classList.remove("hidden");
+          elements.pauseIcon.classList.add("hidden");
+
+          if (state.timerTimeoutId) {
+            clearTimeout(state.timerTimeoutId);
+            state.timerTimeoutId = null;
+          }
+          state.lastTickTime = 0;
+        }
+      }
+
+      /**
+       * Reinicia o timer para o modo atual.
+       */
+      function resetTimer() {
+        if (state.timerTimeoutId) {
+          clearTimeout(state.timerTimeoutId);
+          state.timerTimeoutId = null;
+        }
+        state.isRunning = false;
+        state.lastTickTime = 0;
+        const config = getModeConfig(state.currentMode);
+        state.timeLeft = config.time;
+        updateUI();
+
+        elements.startPauseText.textContent = "Iniciar";
+        elements.playIcon.classList.remove("hidden");
+        elements.pauseIcon.classList.add("hidden");
+        elements.message.textContent = "Pronto para começar?";
+      }
+
+      /**
+       * Lida com o fim de um ciclo de timer.
+       */
+      function handleTimerEnd() {
+        if (state.timerTimeoutId) {
+          clearTimeout(state.timerTimeoutId);
+          state.timerTimeoutId = null;
+        }
+        state.isRunning = false;
+        state.lastTickTime = 0;
+
+        playNotificationSound();
+
+        if (state.currentMode === "work") {
+          state.focusSessions++;
+          state.focusCoins += 1;
+
+          elements.currentCycle.textContent = `Sessões Foco: ${state.focusSessions}`;
+          elements.focusCoinsDisplay.textContent = `${state.focusCoins} Moedas`;
+
+          if (state.focusSessions % FULL_CYCLE === 0) {
+            elements.message.textContent = `Parabéns! +1 Moeda! Pausa longa de 15 min.`;
+            changeMode("longBreak");
+          } else {
+            elements.message.textContent = `Foco concluído! +1 Moeda! Pausa curta de 5 min.`;
+            changeMode("shortBreak");
+          }
+        } else {
+          elements.message.textContent =
+            "Pausa concluída! Hora de voltar ao foco.";
+          changeMode("work");
+        }
+      }
+
+      /**
+       * Toca um som de notificação (simples bip).
+       */
+      function playNotificationSound() {
+        if (
+          typeof AudioContext !== "undefined" ||
+          typeof webkitAudioContext !== "undefined"
+        ) {
+          try {
+            const audioContext = new (window.AudioContext ||
+              window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = "sine";
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(
+              0.5,
+              audioContext.currentTime + 0.05
+            );
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+          } catch (e) {
+            console.error("Erro ao tentar tocar o som:", e);
+          }
+        }
+      }
+
+      /**
+       * Atualiza todos os elementos visuais.
+       */
+      function updateUI() {
+        const config = getModeConfig(state.currentMode);
+        const totalTime = config.time;
+
+        elements.timerDisplay.textContent = formatTime(state.timeLeft);
+
+        elements.focusCoinsDisplay.textContent = `${state.focusCoins} Moedas`;
+        elements.currentCycle.textContent = `Sessões Foco: ${state.focusSessions}`;
+
+        if (state.currentMode === "work") {
+          elements.cycleDetail.textContent = `Pomodoro ${
+            (state.focusSessions % FULL_CYCLE) + 1
+          } de ${FULL_CYCLE}`;
+        } else if (state.currentMode === "shortBreak") {
+          elements.cycleDetail.textContent = `Pausa Curta`;
+        } else {
+          elements.cycleDetail.textContent = `Pausa Longa`;
+        }
+
+        const percentage = ((totalTime - state.timeLeft) / totalTime) * 100;
+        setProgress(percentage);
+
+        document.title = `(${formatTime(state.timeLeft)}) - Pomodoro ${
+          state.currentMode === "work" ? "Foco" : "Pausa"
+        }`;
+      }
+
+      // --- Listeners de Eventos ---
+      elements.startPauseBtn.addEventListener("click", () => toggleTimer());
+      elements.resetBtn.addEventListener("click", () => resetTimer());
+
+      elements.modeButtons.forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          changeMode(e.currentTarget.dataset.mode);
+        });
       });
+
+      // Listeners de Música
+      elements.musicToggleBtn.addEventListener("click", () => {
+        elements.musicPlayerPanel.classList.toggle("hidden");
+      });
+
+      elements.closeMusicBtn.addEventListener("click", () => {
+        elements.musicPlayerPanel.classList.add("hidden");
+      });
+
+      // Listener de Clima
+      elements.cycleWeatherBtn.addEventListener("click", cycleWeatherTheme);
+
+      // --- Inicialização ---
+      applyWeatherTheme(); // Define o fundo inicial (Ensolarado)
+      updateModeButtons();
+      updateUI();
     </script>
   </body>
 </html>
